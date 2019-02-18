@@ -51,6 +51,10 @@ class Chef
             original_shell_out!(*args, options)
           end
 
+          def rubygems_version
+            @rubygems_version ||= shell_out!("#{@gem_binary_location} --version").stdout.chomp
+          end
+
           private
 
             def system_path
@@ -85,7 +89,7 @@ class Chef
           version_option = (version.nil? || version.empty?) ? "" : " -v \"#{version}\""
 
           shell_out!(
-            "#{gem_binary_path} install #{name} -q --no-rdoc --no-ri #{version_option} #{src}#{opts}",
+            "#{gem_binary_path} install #{name} -q #{rdoc_string} #{version_option} #{src}#{opts}",
             :user => node[:rbenv][:user],
             :group => node[:rbenv][:group],
             :env => {
@@ -94,6 +98,20 @@ class Chef
             }
           )
         end
+
+        private
+
+          def rdoc_string
+            if needs_nodocument?
+              "--no-document"
+            else
+              "--no-rdoc --no-ri"
+            end
+          end
+
+          def needs_nodocument?
+            Gem::Requirement.new(">= 3.0.0.beta1").satisfied_by?(Gem::Version.new(gem_env.rubygems_version))
+          end
       end
     end
   end
